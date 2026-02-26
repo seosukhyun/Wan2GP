@@ -1,0 +1,14 @@
+ARG BASE_IMAGE=wan2gp:latest
+FROM ${BASE_IMAGE}
+
+USER root
+RUN pip install --no-cache-dir redis>=5.0.0 boto3>=1.28.0 requests>=2.31.0
+COPY worker/ /workspace/worker/
+RUN mkdir -p /workspace/outputs && chown -R user:user /workspace/outputs
+USER user
+
+ENV PYTHONUNBUFFERED=1
+ENV WAN2GP_ROOT=/workspace
+ENV OUTPUT_DIR=/workspace/outputs
+
+ENTRYPOINT ["python3", "-m", "worker.main"]

@@ -1,0 +1,45 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+
+  worker:
+    build:
+      context: ..
+      dockerfile: worker/Dockerfile.worker
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_BUCKET: wan2gp-outputs
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      MODEL_TYPE: i2v_2_2
+      MMGP_PROFILE: "3"
+      ATTENTION_MODE: sage2
+      QUANTIZATION: int8
+    volumes:
+      - model_cache:/home/user/.cache/huggingface
+    depends_on:
+      - redis
+      - minio
+
+volumes:
+  model_cache:
